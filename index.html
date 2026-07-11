@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#07121f">
+  <title>WageFlow – Wage Tracking Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js" defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.2/jspdf.umd.min.js" defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.4/jspdf.plugin.autotable.min.js" defer></script>
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar" aria-label="Main navigation">
+      <div class="brand-row">
+        <div class="brand-mark"><span>W</span></div>
+        <div class="brand-copy"><strong>WageFlow</strong><small>Wage management</small></div>
+        <button class="icon-button sidebar-collapse" id="sidebarCollapse" aria-label="Collapse sidebar"><i data-lucide="panel-left-close"></i></button>
+      </div>
+
+      <nav class="nav-list">
+        <button class="nav-item active" data-view="dashboard"><i data-lucide="layout-dashboard"></i><span>Dashboard</span></button>
+        <button class="nav-item" data-view="calendar"><i data-lucide="calendar-days"></i><span>Calendar</span></button>
+        <button class="nav-item" data-view="records"><i data-lucide="table-2"></i><span>Wage Records</span></button>
+        <button class="nav-item" data-view="reports"><i data-lucide="chart-no-axes-combined"></i><span>Reports</span></button>
+        <button class="nav-item" data-view="settings"><i data-lucide="settings"></i><span>Settings</span></button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="storage-card">
+          <div class="storage-icon"><i data-lucide="database"></i></div>
+          <div><strong>Device profiles</strong><small>Separate local data for each user.</small></div>
+        </div>
+        <button class="profile-switch-button" id="switchProfile" type="button"><i data-lucide="users"></i><span><small>Current user</small><strong id="activeProfileName">Choose user</strong></span><i data-lucide="chevron-right"></i></button>
+        <div class="theme-picker-wrap">
+          <button class="theme-toggle" id="themeToggle" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="themeMenu"><i data-lucide="palette"></i><span>Choose theme</span><i data-lucide="chevron-up" class="theme-chevron"></i></button>
+          <div class="theme-menu" id="themeMenu" role="menu" aria-label="Choose application theme">
+            <button type="button" class="theme-choice" data-theme-choice="light" role="menuitem"><i data-lucide="sun"></i><span><strong>Light</strong><small>Bright and clean</small></span><i data-lucide="check" class="theme-check"></i></button>
+            <button type="button" class="theme-choice" data-theme-choice="dark" role="menuitem"><i data-lucide="moon"></i><span><strong>Dark</strong><small>Easy on the eyes</small></span><i data-lucide="check" class="theme-check"></i></button>
+            <button type="button" class="theme-choice" data-theme-choice="glass" role="menuitem"><i data-lucide="panels-top-left"></i><span><strong>Glass</strong><small>Translucent frosted style</small></span><i data-lucide="check" class="theme-check"></i></button>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <div class="mobile-overlay" id="mobileOverlay"></div>
+
+    <main class="main-content">
+      <header class="topbar">
+        <button class="icon-button mobile-menu" id="mobileMenu" aria-label="Open navigation"><i data-lucide="menu"></i></button>
+        <div>
+          <p class="eyebrow">Financial workspace</p>
+          <h1 id="pageTitle">Wage Dashboard</h1>
+        </div>
+        <div class="top-actions">
+          <button class="button secondary" id="exportPdfTop"><i data-lucide="file-down"></i><span>Export PDF</span></button>
+          <button class="button primary" id="addPaymentTop"><i data-lucide="plus"></i><span>Add Payment</span></button>
+        </div>
+      </header>
+
+      <section class="view active" id="dashboardView">
+        <div class="period-toolbar card">
+          <div class="period-left">
+            <button class="icon-button" id="prevMonth" aria-label="Previous month"><i data-lucide="chevron-left"></i></button>
+            <div><small>Current reporting period</small><strong id="currentPeriod">July 2026</strong></div>
+            <button class="icon-button" id="nextMonth" aria-label="Next month"><i data-lucide="chevron-right"></i></button>
+          </div>
+          <div class="period-right">
+            <button class="button ghost" id="todayButton"><i data-lucide="locate-fixed"></i>Today</button>
+            <select id="monthSelect" aria-label="Select month"></select>
+            <select id="yearSelect" aria-label="Select year"></select>
+          </div>
+        </div>
+
+        <div class="summary-grid" id="summaryCards"></div>
+
+        <div class="dashboard-grid">
+          <section class="card calendar-card">
+            <div class="section-header">
+              <div><p class="eyebrow">Monthly overview</p><h2>Interactive Wage Calendar</h2></div>
+              <div class="segmented"><button class="active" data-calendar-mode="grid">Calendar</button><button data-calendar-mode="list">List</button></div>
+            </div>
+            <div id="calendarContainer"></div>
+          </section>
+
+          <aside class="side-stack">
+            <section class="card quick-card">
+              <div class="section-header compact"><div><p class="eyebrow">Fast workflow</p><h2>Quick Entry</h2></div><i data-lucide="zap"></i></div>
+              <form id="quickEntryForm" class="form-stack">
+                <div class="field"><label for="quickAmount">Payment amount</label><div class="money-input"><span id="quickCurrencySymbol">£</span><input id="quickAmount" type="number" min="0" step="0.01" placeholder="0.00" required></div></div>
+                <div class="field"><label for="quickStart">Start date</label><input id="quickStart" type="date" required></div>
+                <div class="field"><label for="quickEnd">End date</label><input id="quickEnd" type="date"></div>
+                <label class="check-row"><input id="weekdaysOnly" type="checkbox"><span>Apply to weekdays only</span></label>
+                <button class="button primary full" type="submit"><i data-lucide="check"></i>Review & Apply</button>
+              </form>
+            </section>
+
+            <section class="card calculator-card">
+              <div class="section-header compact"><div><p class="eyebrow">Live calculations</p><h2>Wage Calculator</h2></div><i data-lucide="calculator"></i></div>
+              <div class="field"><label for="calculatorEmployee">Employee</label><select id="calculatorEmployee"><option value="all">All employees</option></select></div>
+              <div class="metric-list" id="calculatorMetrics"></div>
+            </section>
+          </aside>
+        </div>
+
+        <section class="card records-preview">
+          <div class="section-header"><div><p class="eyebrow">Latest activity</p><h2>Recent Wage Records</h2></div><button class="button ghost" data-go-view="records">View all records<i data-lucide="arrow-right"></i></button></div>
+          <div class="table-wrap"><table><thead><tr><th>Date</th><th>Employee</th><th>Amount</th><th>Method</th><th>Status</th><th>Actions</th></tr></thead><tbody id="recentRecordsBody"></tbody></table></div>
+        </section>
+      </section>
+
+      <section class="view" id="calendarView">
+        <section class="card full-calendar-page">
+          <div class="section-header"><div><p class="eyebrow">Schedule and payments</p><h2>Wage Calendar</h2><p id="calendarCurrentPeriod" class="calendar-period-label"></p></div><button class="button primary" id="calendarAdd"><i data-lucide="plus"></i>Add Payment</button></div>
+          <div class="calendar-page-controls" aria-label="Calendar month navigation">
+            <button class="icon-button" id="calendarPrevMonth" type="button" aria-label="Previous month"><i data-lucide="chevron-left"></i></button>
+            <select id="calendarMonthSelect" aria-label="Select month"></select>
+            <select id="calendarYearSelect" aria-label="Select year"></select>
+            <button class="button secondary" id="calendarTodayButton" type="button">Today</button>
+            <button class="icon-button" id="calendarNextMonth" type="button" aria-label="Next month"><i data-lucide="chevron-right"></i></button>
+          </div>
+          <div id="calendarPageContainer"></div>
+        </section>
+      </section>
+
+      <section class="view" id="recordsView">
+        <section class="card">
+          <div class="section-header"><div><p class="eyebrow">Search and audit</p><h2>All Wage Records</h2></div><div class="button-row"><button class="button secondary" id="exportCsv"><i data-lucide="file-spreadsheet"></i>Export CSV</button><button class="button primary" id="recordAdd"><i data-lucide="plus"></i>Add Payment</button></div></div>
+          <div class="filters-grid">
+            <div class="field"><label for="recordSearch">Search</label><div class="search-input"><i data-lucide="search"></i><input id="recordSearch" placeholder="Employee, notes, method..."></div></div>
+            <div class="field"><label for="filterFrom">From</label><input id="filterFrom" type="date"></div>
+            <div class="field"><label for="filterTo">To</label><input id="filterTo" type="date"></div>
+            <div class="field"><label for="filterMethod">Method</label><select id="filterMethod"><option value="all">All methods</option><option>Cash</option><option>Bank transfer</option><option>Card</option><option>Other</option></select></div>
+            <div class="field"><label for="filterMin">Minimum</label><input id="filterMin" type="number" min="0" step="0.01" placeholder="£0"></div>
+            <div class="field"><label for="filterMax">Maximum</label><input id="filterMax" type="number" min="0" step="0.01" placeholder="No limit"></div>
+          </div>
+          <div class="table-wrap records-table-wrap"><table><thead><tr><th data-sort="date">Date ↕</th><th>Day</th><th>Employee</th><th data-sort="amount">Amount ↕</th><th>Method</th><th>Status</th><th>Notes</th><th>Actions</th></tr></thead><tbody id="recordsBody"></tbody></table></div>
+          <div class="pagination" id="pagination"></div>
+        </section>
+      </section>
+
+      <section class="view" id="reportsView">
+        <div class="summary-grid" id="reportSummaryCards"></div>
+        <div class="charts-grid">
+          <section class="card chart-card"><div class="section-header compact"><div><p class="eyebrow">Weekly totals</p><h2>Wages by Week</h2></div></div><div class="chart-box"><canvas id="weeklyChart"></canvas></div></section>
+          <section class="card chart-card"><div class="section-header compact"><div><p class="eyebrow">Daily activity</p><h2>Daily Payments</h2></div></div><div class="chart-box"><canvas id="dailyChart"></canvas></div></section>
+          <section class="card chart-card small-chart"><div class="section-header compact"><div><p class="eyebrow">Attendance status</p><h2>Paid vs Blank</h2></div></div><div class="chart-box"><canvas id="statusChart"></canvas></div></section>
+          <section class="card chart-card"><div class="section-header compact"><div><p class="eyebrow">12 month view</p><h2>Monthly Trend</h2></div></div><div class="chart-box"><canvas id="monthlyChart"></canvas></div></section>
+        </div>
+        <section class="card employee-breakdown"><div class="section-header"><div><p class="eyebrow">Team overview</p><h2>Totals by Employee</h2></div><button class="button secondary" id="exportPdfReports"><i data-lucide="file-down"></i>Export Report</button></div><div id="employeeBreakdown" class="employee-grid"></div></section>
+      </section>
+
+      <section class="view" id="settingsView">
+        <div class="settings-layout">
+          <section class="card">
+            <div class="section-header"><div><p class="eyebrow">Business profile</p><h2>Application Settings</h2></div></div>
+            <form id="settingsForm" class="settings-form">
+              <div class="field"><label for="businessName">Business or employer name</label><input id="businessName" placeholder="My Business"></div>
+              <div class="field"><label for="defaultCurrency">Application currency</label><select id="defaultCurrency"><option value="GBP">GBP — British Pound</option><option value="KES">KES — Kenyan Shilling (KSh)</option><option value="EUR">EUR — Euro</option><option value="USD">USD — US Dollar</option></select><small>This currency is used throughout WageFlow and can only be changed here.</small></div>
+              <div class="field"><label for="defaultWage">Default daily wage</label><input id="defaultWage" type="number" min="0" step="0.01"></div>
+              <div class="field"><label for="weekStart">First day of week</label><select id="weekStart"><option value="1">Monday</option><option value="0">Sunday</option></select></div>
+              <div class="field"><label for="dateFormat">Date format</label><select id="dateFormat"><option value="DD/MM/YYYY">DD/MM/YYYY</option><option value="MM/DD/YYYY">MM/DD/YYYY</option><option value="YYYY-MM-DD">YYYY-MM-DD</option></select></div><div class="field"><label for="themeStyle">Application theme</label><select id="themeStyle"><option value="light">Light</option><option value="dark">Dark</option><option value="glass">Translucent Glass</option></select></div>
+              <div class="field"><label for="reportTitle">PDF report title</label><input id="reportTitle" placeholder="Monthly Wage Report"></div>
+              <div class="field full-span"><label for="companyAddress">Company address</label><textarea id="companyAddress" rows="3" placeholder="Address shown on PDF reports"></textarea></div>
+              <div class="field full-span"><label for="logoUpload">Optional logo</label><input id="logoUpload" type="file" accept="image/*"><small>Stored locally in this browser and used in reports.</small></div>
+              <div class="full-span button-row"><button class="button primary" type="submit"><i data-lucide="save"></i>Save Settings</button></div>
+            </form>
+          </section>
+          <aside class="side-stack">
+            <section class="card"><div class="section-header compact"><div><p class="eyebrow">Backup</p><h2>Data Management</h2></div></div><div class="form-stack"><button class="button secondary full" id="exportJson"><i data-lucide="download"></i>Export JSON Backup</button><label class="button secondary full file-button"><i data-lucide="upload"></i>Import JSON<input id="importJson" type="file" accept="application/json"></label></div></section>
+            <section class="card danger-card"><div class="section-header compact"><div><p class="eyebrow">Danger zone</p><h2>Reset WageFlow</h2></div></div><p>Delete all wage records and restore default settings. This cannot be undone.</p><button class="button danger full" id="clearAllData"><i data-lucide="trash-2"></i>Clear All Data</button></section>
+          </aside>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <nav class="bottom-nav" aria-label="Mobile navigation">
+    <button class="active" data-view="dashboard"><i data-lucide="layout-dashboard"></i><span>Home</span></button>
+    <button data-view="calendar"><i data-lucide="calendar-days"></i><span>Calendar</span></button>
+    <button data-view="records"><i data-lucide="table-2"></i><span>Records</span></button>
+    <button data-view="reports"><i data-lucide="chart-no-axes-combined"></i><span>Reports</span></button>
+    <button data-view="settings"><i data-lucide="settings"></i><span>Settings</span></button>
+  </nav>
+
+
+  <div class="modal" id="profileModal" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="profileModalTitle">
+    <div class="modal-backdrop" data-close-profile></div>
+    <div class="modal-panel profile-panel">
+      <div class="modal-header"><div><p class="eyebrow">Local user workspaces</p><h2 id="profileModalTitle">Choose a WageFlow User</h2><p>Each user has separate wage records and settings on this device.</p></div><button class="icon-button" type="button" data-close-profile aria-label="Close"><i data-lucide="x"></i></button></div>
+      <div class="modal-body">
+        <div id="profileList" class="profile-list"></div>
+        <div class="profile-create"><div class="field"><label for="newProfileName">Create a new local user</label><input id="newProfileName" maxlength="50" placeholder="Enter user or business name" autocomplete="off"></div><button class="button primary" id="createProfile" type="button"><i data-lucide="user-plus"></i>Create User</button></div>
+        <p class="profile-note"><strong>Offline storage:</strong> These profiles remain on this browser profile. To share accounts between browsers or devices, WageFlow needs a secure backend and login system.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal" id="paymentModal" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="paymentModalTitle">
+    <div class="modal-backdrop" data-close-modal="paymentModal"></div>
+    <div class="modal-panel">
+      <div class="modal-header"><div><p class="eyebrow">Daily wage record</p><h2 id="paymentModalTitle">Add Payment</h2><p id="paymentDateLabel"></p></div><button class="icon-button" data-close-modal="paymentModal" aria-label="Close"><i data-lucide="x"></i></button></div>
+      <form id="paymentForm" class="modal-body">
+        <input id="paymentId" type="hidden"><input id="paymentDate" type="hidden">
+        <section id="dateEntriesPanel" class="date-entries-panel hidden" aria-label="Entries for selected date">
+          <div class="date-entries-heading"><div><strong>Entries on this date</strong><small>Select an entry to edit it</small></div><button class="button secondary" id="addNewEntry" type="button"><i data-lucide="plus"></i>Add New Entry</button></div>
+          <div id="dateEntriesList" class="date-entries-list"></div>
+        </section>
+        <div class="form-grid">
+          <div class="field"><label for="paymentType">Payment type</label><select id="paymentType"><option value="daily">Daily payment</option><option value="monthly">Monthly salary</option></select></div>
+          <div class="field"><label for="paymentAmount"><span id="paymentAmountLabel">Payment amount</span></label><div class="money-input"><span id="currencySymbol">£</span><input id="paymentAmount" type="number" min="0" step="0.01" placeholder="0.00" required></div></div>
+          <div class="field hidden" id="salaryDistributionField"><label for="salaryDistribution">Spread monthly salary across</label><select id="salaryDistribution"><option value="weekdays">Weekdays only (Monday–Friday)</option><option value="calendar">All calendar days</option></select><small>The salary is stored once and divided accurately across the selected days.</small></div>
+          <div class="field"><label for="paymentEmployee">Employee name</label><input id="paymentEmployee" list="employeeSuggestions" placeholder="Optional" autocomplete="off"><datalist id="employeeSuggestions"></datalist></div>
+          <div class="field"><label for="paymentMethod">Payment method</label><select id="paymentMethod"><option value="Cash">Cash</option><option value="Bank transfer">Bank transfer</option><option value="Card">Card</option><option value="Other">Other</option></select></div><label class="toggle-row full-span"><span><strong>Recurring payment</strong><small>Create matching entries automatically on future dates.</small></span><input id="paymentRecurring" type="checkbox"><span class="switch"><span></span></span></label><div id="recurringFields" class="recurring-fields full-span hidden"><div class="field"><label>Repeat</label><div class="readonly-option">Every month on the same date</div></div><div class="field"><label for="recurringEndDate">Repeat until <span class="optional-label">(optional)</span></label><input id="recurringEndDate" type="date"><small>Leave blank to continue monthly. Future entries appear when you open that month.</small></div></div>
+          <div class="field full-span"><label for="paymentNotes">Notes</label><textarea id="paymentNotes" rows="3" placeholder="Optional note"></textarea></div>
+          <label class="toggle-row full-span"><span><strong>Mark as Paid</strong><small>New entries start unpaid. Turn this on only after the payment has been completed.</small></span><input id="paymentPaid" type="checkbox"><span class="switch"><span></span></span></label>
+        </div>
+        <div class="modal-actions"><button class="button danger hidden" type="button" id="deletePayment"><i data-lucide="trash-2"></i>Delete</button><span class="spacer"></span><button class="button ghost" type="button" data-close-modal="paymentModal">Cancel</button><button class="button secondary hidden" type="button" id="clearPayment"><i data-lucide="eraser"></i>Mark Unpaid</button><button class="button primary" type="submit"><i data-lucide="save"></i>Save Payment</button></div>
+      </form>
+    </div>
+  </div>
+
+  <div class="modal" id="confirmModal" aria-hidden="true" role="dialog" aria-modal="true">
+    <div class="modal-backdrop" data-close-modal="confirmModal"></div>
+    <div class="modal-panel small"><div class="modal-header"><div><p class="eyebrow">Please confirm</p><h2 id="confirmTitle">Confirm action</h2></div><button class="icon-button" data-close-modal="confirmModal"><i data-lucide="x"></i></button></div><div class="modal-body"><p id="confirmMessage"></p><div class="modal-actions"><button class="button ghost" data-close-modal="confirmModal">Cancel</button><button class="button danger" id="confirmAction">Confirm</button></div></div></div>
+  </div>
+
+  <div class="modal" id="exportModal" aria-hidden="true" role="dialog" aria-modal="true">
+    <div class="modal-backdrop" data-close-modal="exportModal"></div>
+    <div class="modal-panel large"><div class="modal-header"><div><p class="eyebrow">PDF report builder</p><h2>Export Wage Report</h2></div><button class="icon-button" data-close-modal="exportModal"><i data-lucide="x"></i></button></div>
+      <form id="exportForm" class="modal-body">
+        <div class="form-grid">
+          <div class="field"><label for="exportRange">Reporting period</label><select id="exportRange"><option value="month">Current selected month</option><option value="custom">Custom date range</option></select></div>
+          <div class="field"><label for="exportEmployee">Employee</label><select id="exportEmployee"><option value="all">All employees</option></select></div>
+          <div class="field export-custom hidden"><label for="exportFrom">From</label><input id="exportFrom" type="date"></div>
+          <div class="field export-custom hidden"><label for="exportTo">To</label><input id="exportTo" type="date"></div>
+          <div class="field"><label for="exportOrientation">Orientation</label><select id="exportOrientation"><option value="portrait">Portrait</option><option value="landscape">Landscape</option></select></div>
+          <div class="full-span export-checks">
+            <label class="check-row"><input id="includeSummary" type="checkbox" checked><span>Summary</span></label>
+            <label class="check-row"><input id="includeCalendar" type="checkbox" checked><span>Calendar summary</span></label>
+            <label class="check-row"><input id="includeCharts" type="checkbox"><span>Chart data summary</span></label>
+            <label class="check-row"><input id="includeTable" type="checkbox" checked><span>Detailed payment table</span></label>
+            <label class="check-row"><input id="includeNotes" type="checkbox" checked><span>Notes</span></label>
+          </div>
+        </div>
+        <div class="modal-actions"><button class="button ghost" type="button" data-close-modal="exportModal">Cancel</button><button class="button primary" type="submit"><i data-lucide="file-down"></i>Generate PDF</button></div>
+      </form>
+    </div>
+  </div>
+
+  <div class="toast-region" id="toastRegion" aria-live="polite"></div>
+</body>
+</html>
